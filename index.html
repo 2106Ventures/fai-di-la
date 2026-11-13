@@ -400,8 +400,8 @@ const C=h=>new THREE.Color(h), sstep=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-
 const TINT=[[M.walk,0x8f8a84,0x221c22],[M.kerbL,0xb4b4b4,0x6a6a70],[M.kerbR,0xb4b4b4,0x6a6a70],[M.pole,0x5a5a62,0x2a2a30],[M.fbridge,0x9c9ca4,0x3a3a42],
   [M.lamp,0x8c8c92,0xffb45a],[M.head,0xd6d6cc,0xffffee],[M.tail,0x8a1424,0xff1030],[M.taxiSign,0xd8d0a4,0xfff2a0],[M.vwin,0x2c3642,0xffe6a8],[M.twin,0x2c3642,0xe4ffd8],
   [M.lm.gold,0xc8a030,0xffd43a],[M.water,0x4f8fb4,0x0c1228],[M.dumpTrim,0x3a9a5a,0x7dff6a],[M.cabin,0x1a2230,0x0c0a1c]].map(([m,d,n])=>({m,d:C(d),n:C(n)}));
-const K3={bg:[C(0x2f7fd0),C(0x232a5c),C(0x05040f)],fog:[C(0xa9c8e0),C(0xc47a62),C(0x1e1024)],dens:[0.0032,0.0044,0.0056],amb:[C(0xffffff),C(0xffc8a0),C(0xc9b0d8)],ambI:[1.05,0.9,0.85],
-  sun:[C(0xfff4e0),C(0xff9050),C(0xffb070)],sunI:[0.95,0.8,0.75],disc:[C(0xfffbe6),C(0xff8a3c),C(0xff4a28)],elev:[0.40,0.12,0.0]};
+const K3={bg:[C(0x2f7fd0),C(0x232a5c),C(0x05040f)],fog:[C(0xa9c8e0),C(0xc47a62),C(0x1e1024)],dens:[0.0032,0.0044,0.0056],amb:[C(0xffffff),C(0xffc8a0),C(0xc9b0d8)],ambI:[0.66,0.72,0.85],
+  sun:[C(0xfff4e0),C(0xff9050),C(0xffb070)],sunI:[0.6,0.65,0.75],disc:[C(0xfffbe6),C(0xff8a3c),C(0xff4a28)],elev:[0.40,0.12,0.0]};
 const tmpC=new THREE.Color();
 const mix3c=(k,t,out)=>t<0.5?out.copy(k[0]).lerp(k[1],t*2):out.copy(k[1]).lerp(k[2],t*2-1);
 const mix3=(k,t)=>t<0.5?k[0]+(k[1]-k[0])*t*2:k[1]+(k[2]-k[1])*(t*2-1);
@@ -525,28 +525,70 @@ function updateChunks(s){
 
 /* ---------- obstacle factories ---------- */
 function mesh(g,m,x,y,z,parent){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);parent.add(o);return o;}
+/* ---------- vehicles ---------- */
+const GC={};const gb=(w,h,d)=>GC[w+','+h+','+d]||(GC[w+','+h+','+d]=box(w,h,d));
+const wheelG=(r,w)=>{const k='w'+r+','+w;if(!GC[k]){GC[k]=new THREE.CylinderGeometry(r,r,w,12);GC[k].rotateZ(Math.PI/2);}return GC[k];};
+function wheels(g,r,xw,zs){for(const z of zs)for(const x of [-xw,xw]){mesh(wheelG(r,0.26),M.tyre,x,r,z,g);mesh(wheelG(r*0.5,0.28),M.silver,x,r,z,g);}}
+/* a strip of side windows with body-colour pillars */
+function glassBand(g,w,h,len,y,z0,glass,frame,n){mesh(gb(w+0.03,h,len),glass,0,y,z0,g);for(let i=0;i<=n;i++)mesh(gb(w+0.07,h,0.13),frame,0,y,z0-len/2+len*i/n,g);}
 function lights(g,xs,y,zf,sc){for(const x of [-xs,xs]){const a=mesh(Gm.light,M.head,x,y,-zf,g),b=mesh(Gm.light,M.tail,x,y+0.05,zf,g);
   if(sc){a.scale.set(sc,sc,1);b.scale.set(sc,sc,1);}}}
-function makeCar(){const g=new THREE.Group(),col=M.carBody[(Math.random()*M.carBody.length)|0];
-  mesh(Gm.carBody,col,0,0.6,0,g);mesh(Gm.cabin,M.cabin,0,1.2,0.2,g);lights(g,0.6,0.65,2.12);return g;}
-function makeTaxi(){const g=new THREE.Group(); /* red body, silver roof, lit roof box */
-  mesh(Gm.carBody,M.taxi,0,0.6,0,g);mesh(Gm.cabin,M.cabin,0,1.2,0.2,g);mesh(Gm.taxiRoof,M.silver,0,1.53,0.2,g);
-  mesh(Gm.taxiSign,M.taxiSign,0,1.67,-0.1,g);mesh(Gm.bumper,M.silver,0,0.36,-2.12,g);mesh(Gm.bumper,M.silver,0,0.36,2.12,g);
-  lights(g,0.6,0.65,2.13);return g;}
-function makeMinibus(){const g=new THREE.Group(); /* cream public light bus, red or green roof */
-  mesh(Gm.mbBody,M.cream,0,1.4,0,g);mesh(Gm.mbRoof,M.mbRoof[Math.random()<0.7?0:1],0,2.3,0,g);mesh(Gm.mbWin,M.vwin,0,1.75,0.2,g);
-  mesh(Gm.mbFront,M.cabin,0,1.7,-3.18,g);mesh(Gm.dest,M.taxiSign,0,2.3,-3.2,g);mesh(Gm.mbFront,M.cabin,0,1.7,3.18,g);
-  lights(g,0.75,0.7,3.21,1.2);return g;}
-function makeBus(){const g=new THREE.Group(); /* double-decker */
-  mesh(Gm.ddBody,M.cream,0,2.35,0,g);mesh(Gm.ddSkirt,M.busRed,0,0.9,0,g);mesh(Gm.ddBand,M.busRed,0,2.75,0,g);
-  mesh(Gm.ddWin,M.vwin,0,2.0,0,g);mesh(Gm.ddWin,M.vwin,0,3.55,0,g);
-  const f=mesh(Gm.mbFront,M.cabin,0,2.0,-5.18,g);f.scale.set(1.25,1,1);const f2=mesh(Gm.mbFront,M.cabin,0,3.55,-5.18,g);f2.scale.set(1.25,1,1);
-  mesh(Gm.dest,M.taxiSign,0,2.78,-5.23,g);lights(g,0.95,0.8,5.21,1.5);return g;}
-function makeTram(){const g=new THREE.Group(); /* narrow double-deck tram */
-  mesh(Gm.trBody,M.tram,0,2.45,0,g);mesh(Gm.trBand,M.cream,0,2.75,0,g);mesh(Gm.trWin,M.twin,0,1.9,0,g);mesh(Gm.trWin,M.twin,0,3.5,0,g);
-  mesh(Gm.trPole,M.pole,0,5.1,0.5,g);const d=mesh(Gm.dest,M.taxiSign,0,4.1,-4.52,g);d.scale.set(0.5,1,1);
-  for(const z of [-4.48,4.48]){mesh(Gm.mbFront,M.twin,0,3.5,z,g);mesh(Gm.mbFront,M.twin,0,1.9,z,g);}
-  const hl=mesh(Gm.light,M.head,0,1.0,-4.52,g);hl.scale.set(1.5,1.8,1);for(const x of [-0.7,0.7])mesh(Gm.light,M.tail,x,1.0,4.52,g);return g;}
+function plate(g,geo,mat,x,y,z,ry){const d=new THREE.Mesh(geo,mat);d.position.set(x,y,z);d.rotation.y=ry;g.add(d);return d;}
+const ledTex=(txt,col,w)=>tex(w||256,64,(g,W,H)=>{g.fillStyle='#0a0a0c';g.fillRect(0,0,W,H);g.fillStyle=col;g.shadowColor=col;g.shadowBlur=8;
+  g.textAlign='center';g.textBaseline='middle';let fs=40;g.font='900 '+fs+'px '+CJK;const m=g.measureText(txt).width;if(m>W-16){fs*=(W-16)/m;g.font='900 '+fs+'px '+CJK;}g.fillText(txt,W/2,H/2+2);});
+const VM={
+  taxiDecal:B({transparent:true,map:tex(128,96,(g,w,h)=>{g.fillStyle='#fff';g.textAlign='center';g.textBaseline='middle';g.font='900 40px '+CJK;g.fillText('的士',w/2,26);g.font='900 34px Arial,sans-serif';g.fillText('TAXI',w/2,70);})}),
+  mbDest:['中環 CENTRAL','灣仔 WAN CHAI','山頂 THE PEAK','半山 MID-LEVELS'].map(t=>B({map:ledTex(t,'#ff9a1a')})),
+  busDest:['6 赤柱 STANLEY','15 山頂 THE PEAK','1 中環 CENTRAL','5 銅鑼灣'].map(t=>B({map:ledTex(t,'#fff6c0')})),
+  tramNo:['8','21','120','88'].map(t=>B({map:ledTex(t,'#fff6c0',64)})),
+  tyre:L({color:0x15151a}), black:L({color:0x1c1c22}),
+  busBlue:L({color:0x1f7fd0,emissive:0x1f7fd0,emissiveIntensity:0.28}), busCream:L({color:0xe6d4a0,emissive:0xe6d4a0,emissiveIntensity:0.25}),
+  tramCol:[0x0f6a40,0xf2c21c,0x86cce6].map(c=>L({color:c,emissive:c,emissiveIntensity:0.3})), white:L({color:0xf4f4f0,emissive:0x808080}),
+  door:new THREE.PlaneGeometry(0.62,0.46), mbP:new THREE.PlaneGeometry(1.5,0.34), busP:new THREE.PlaneGeometry(1.9,0.44), numP:new THREE.PlaneGeometry(0.5,0.42)
+};
+M.tyre=VM.tyre;
+function saloon(g,body,roof){
+  mesh(gb(1.84,0.62,4.56),body,0,0.66,0,g);                                   /* body */
+  mesh(gb(1.6,0.5,2.3),M.cabin,0,1.2,0.15,g);                                 /* glass */
+  for(const z of [-1.0,0.15,1.3])mesh(gb(1.64,0.5,0.1),roof,0,1.2,z,g);       /* pillars */
+  mesh(gb(1.66,0.08,2.4),roof,0,1.49,0.15,g);                                 /* roof */
+  mesh(gb(1.88,0.2,0.14),VM.black,0,0.45,-2.3,g);mesh(gb(1.88,0.2,0.14),VM.black,0,0.45,2.3,g);   /* bumpers */
+  mesh(gb(1.0,0.2,0.06),VM.black,0,0.74,-2.29,g);                             /* grille */
+  lights(g,0.68,0.74,2.3);wheels(g,0.33,0.86,[-1.45,1.45]);}
+function makeCar(){const g=new THREE.Group(),col=M.carBody[(Math.random()*M.carBody.length)|0];saloon(g,col,col);return g;}
+function makeTaxi(){const g=new THREE.Group();   /* red saloon, silver roof and pillars, lettering on the front doors, roof light */
+  saloon(g,M.taxi,M.silver);mesh(gb(0.5,0.17,0.2),M.taxiSign,0,1.61,-0.25,g);
+  for(const sx of [-1,1])plate(g,VM.door,VM.taxiDecal,sx*0.925,0.68,-0.3,sx*Math.PI/2);return g;}
+function makeMinibus(){const g=new THREE.Group(),roof=M.mbRoof[Math.random()<0.7?0:1];   /* cream public light bus, red (or green) roof, lit destination box */
+  mesh(gb(2.04,1.05,6.6),M.cream,0,0.98,0,g);
+  glassBand(g,2.0,0.85,6.2,1.93,0.1,M.vwin,M.cream,5);
+  mesh(gb(2.04,0.14,6.6),M.cream,0,2.42,0,g);mesh(gb(2.08,0.26,6.64),roof,0,2.6,0,g);
+  mesh(gb(1.84,0.95,0.08),M.cabin,0,1.9,-3.3,g);mesh(gb(1.7,0.7,0.08),M.cabin,0,1.95,3.3,g);
+  mesh(gb(1.6,0.4,0.2),roof,0,2.62,-3.28,g);plate(g,VM.mbP,VM.mbDest[(Math.random()*4)|0],0,2.62,-3.39,Math.PI);
+  mesh(gb(1.5,0.22,0.06),VM.black,0,0.95,-3.31,g);
+  mesh(gb(2.08,0.2,0.14),VM.black,0,0.5,-3.3,g);mesh(gb(2.08,0.2,0.14),VM.black,0,0.5,3.3,g);
+  lights(g,0.78,0.72,3.32,1.2);wheels(g,0.38,0.9,[-2.2,2.0]);return g;}
+function makeBus(){const g=new THREE.Group();   /* Island double-decker: blue below, cream above */
+  mesh(gb(2.5,1.0,10.4),VM.busBlue,0,0.95,0,g);
+  glassBand(g,2.46,0.85,9.6,1.88,0.1,M.vwin,VM.busBlue,7);
+  mesh(gb(2.5,0.75,10.4),VM.busCream,0,2.68,0,g);
+  glassBand(g,2.46,0.8,10.0,3.45,0,M.vwin,VM.busCream,8);
+  mesh(gb(2.5,0.5,10.4),VM.busCream,0,4.1,0,g);
+  mesh(gb(2.3,0.82,0.08),M.cabin,0,1.9,-5.21,g);mesh(gb(2.3,0.76,0.08),M.cabin,0,3.45,-5.21,g);mesh(gb(0.1,0.8,0.1),VM.busCream,0,3.45,-5.23,g);
+  mesh(gb(2.2,0.76,0.08),M.cabin,0,3.45,5.21,g);mesh(gb(2.0,0.7,0.08),M.cabin,0,1.9,5.21,g);
+  plate(g,VM.busP,VM.busDest[(Math.random()*4)|0],0,2.68,-5.22,Math.PI);
+  mesh(gb(1.3,0.5,0.06),M.silver,0,1.0,-5.21,g);
+  mesh(gb(2.54,0.22,0.14),VM.black,0,0.5,-5.2,g);mesh(gb(2.54,0.22,0.14),VM.black,0,0.5,5.2,g);
+  lights(g,0.98,0.84,5.22,1.4);wheels(g,0.5,1.12,[-3.4,3.2]);return g;}
+function makeTram(){const g=new THREE.Group(),c=VM.tramCol[(Math.random()*3)|0];   /* narrow double-deck tram in green, yellow or pale blue */
+  mesh(gb(1.9,0.3,8.4),VM.black,0,0.33,0,g);
+  mesh(gb(2.06,0.95,9),c,0,0.92,0,g);glassBand(g,2.02,0.85,8.4,1.83,0,M.twin,M.cream,7);
+  mesh(gb(2.06,0.7,9),c,0,2.6,0,g);glassBand(g,2.02,0.8,8.4,3.35,0,M.twin,M.cream,7);
+  mesh(gb(2.06,0.35,9),M.cream,0,3.92,0,g);
+  for(const z of [-4.5,4.5]){mesh(gb(1.6,0.8,0.08),M.cabin,0,1.85,z,g);mesh(gb(1.6,0.76,0.08),M.cabin,0,3.35,z,g);mesh(gb(1.96,0.14,0.1),VM.white,0,0.62,z*1.004,g);}
+  mesh(gb(0.62,0.5,0.4),VM.black,0,4.35,-4.2,g);plate(g,VM.numP,VM.tramNo[(Math.random()*4)|0],0,4.35,-4.41,Math.PI);
+  mesh(Gm.trPole,M.pole,0,4.7,0.6,g).rotation.x=0.5;
+  const hl=mesh(Gm.light,M.head,0,1.05,-4.54,g);hl.scale.set(1.3,2,1);for(const x of [-0.7,0.7])mesh(Gm.light,M.tail,x,1.0,4.54,g);return g;}
 function makeBarrier(){const g=new THREE.Group();mesh(Gm.bar,M.bar,0,0.6,0,g);
   mesh(Gm.barLeg,M.pole,-1.4,0.25,0,g);mesh(Gm.barLeg,M.pole,1.4,0.25,0,g);return g;}
 function makeDump(){const g=new THREE.Group();mesh(Gm.dump,M.dump,0,0.7,0,g);mesh(Gm.dumpTrim,M.dumpTrim,0,1.42,0,g);return g;}
@@ -564,11 +606,11 @@ const TYPES={
   stall:{make:makeStall,hw:1.35,hl:1.15,h:2.4,near:0},
   scaffold:{make:makeScaffold,hw:1.3,hl:2.6,h:6.2,near:0},
   rail:{make:null,hw:0.22,hl:10,h:0.62,near:0,rail:true},
-  car:{make:makeCar,hw:0.95,hl:2.1,h:1.5,near:50},
-  taxi:{make:makeTaxi,hw:0.95,hl:2.1,h:1.6,near:50},
-  minibus:{make:makeMinibus,hw:1.05,hl:3.25,h:2.55,near:75},
+  car:{make:makeCar,hw:0.95,hl:2.28,h:1.55,near:50},
+  taxi:{make:makeTaxi,hw:0.95,hl:2.28,h:1.65,near:50},
+  minibus:{make:makeMinibus,hw:1.05,hl:3.3,h:2.7,near:75},
   bus:{make:makeBus,hw:1.3,hl:5.25,h:4.4,near:100},
-  tram:{make:makeTram,hw:1.1,hl:4.55,h:4.55,near:100},
+  tram:{make:makeTram,hw:1.1,hl:4.5,h:4.6,near:100},
   barrier:{make:makeBarrier,hw:1.75,hl:0.35,h:1.0,near:0},
   dump:{make:makeDump,hw:1.1,hl:0.8,h:1.45,near:0},
   kicker:{make:()=>new THREE.Mesh(Gm.kicker,M.ramp),hw:1.3,hl:1.8,h:0,near:0,ramp:true,rh:0.8,L0:3.5,name:'KICKER'},
@@ -1078,7 +1120,7 @@ function frame(ms){
 }
 document.addEventListener('visibilitychange',()=>{lastT=0;});
 P.y=cy(0);
-window.__game={S_FIN,DIST,distIdx,setTOD,MUS,TX,TZ,TY,TH,TK,TG,P,get state(){return state;},get obs(){return obs;},start,step,key};
+window.__game={addOb,S_FIN,DIST,distIdx,setTOD,MUS,TX,TZ,TY,TH,TK,TG,P,get state(){return state;},get obs(){return obs;},start,step,key};
 requestAnimationFrame(frame);
 })();
 </script>
