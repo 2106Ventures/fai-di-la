@@ -64,6 +64,22 @@
   button.go{font:700 22px 'Rajdhani',sans-serif;letter-spacing:.25em;color:#07021a;background:#7ff6ff;border:0;
     padding:14px 44px;border-radius:4px;cursor:pointer;box-shadow:0 0 24px #00e5ff;text-transform:uppercase}
   button.go:active{transform:scale(.97)}
+  button.ghost{font:700 15px 'Rajdhani',sans-serif;letter-spacing:.25em;color:#7ff6ff;background:none;border:1px solid rgba(127,246,255,.6);
+    padding:9px 22px;border-radius:4px;cursor:pointer;text-transform:uppercase;margin-top:14px}
+  #board{z-index:5;background:rgba(7,2,26,.94)}
+  #board h2{text-shadow:0 0 8px #ffe14f,0 0 30px #ffb800;margin-bottom:14px}
+  #rows{width:min(560px,92vw);max-height:56vh;overflow:auto;font-size:19px;margin-bottom:6px}
+  #rows div{display:grid;grid-template-columns:38px 1fr auto 78px;gap:10px;align-items:baseline;padding:5px 10px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}
+  #rows .rk{color:#b9a8ff}#rows .sc{color:#ffe14f;font-weight:700;text-align:right}#rows .tm{color:#b9a8ff;font-size:15px;text-align:right}
+  #rows .me{background:rgba(61,255,138,.16);box-shadow:inset 3px 0 0 #3dff8a}
+  #rows .gap{display:block;text-align:center;color:#b9a8ff;border:0;padding:0}
+  #lbNote{color:#b9a8ff;font-size:13px;letter-spacing:.08em;margin:6px 0 4px}
+  #nameRow{display:none;gap:10px;justify-content:center;align-items:center;margin:0 0 18px;flex-wrap:wrap}
+  #nameRow.show{display:flex}
+  #nm{font:700 20px 'Rajdhani',sans-serif;letter-spacing:.12em;text-transform:uppercase;text-align:center;width:210px;padding:10px 12px;border-radius:4px;
+    border:1px solid #7ff6ff;background:rgba(7,2,26,.7);color:#fff;outline:none}
+  #nm:focus{box-shadow:0 0 14px #00e5ff}
+  #addBtn{font:700 16px 'Rajdhani',sans-serif;letter-spacing:.18em;color:#07021a;background:#3dff8a;border:0;padding:12px 18px;border-radius:4px;cursor:pointer;text-transform:uppercase}
   .final{font-size:64px;font-weight:700;color:#7ff6ff;text-shadow:0 0 18px #00e5ff;line-height:1;margin-top:14px}
   .stats{color:#b9a8ff;font-size:18px;letter-spacing:.12em;margin:8px 0 26px}
   .stats b{color:#ffe14f}
@@ -106,13 +122,23 @@
     <b>SCORE</b><span>Near misses, tricks and air build your multiplier</span>
   </div>
   <button class="go" id="start">Drop in</button>
+  <button class="ghost" id="lbBtn">Leaderboard</button>
 </div>
 
 <div class="overlay hide" id="over">
   <h2 id="oh">Wiped out</h2>
   <div class="final" id="fs">0</div>
   <div class="stats"><span id="fd"></span> &nbsp;·&nbsp; BEST <b id="fb">0</b></div>
+  <div id="nameRow"><input id="nm" maxlength="12" placeholder="Your name" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="addBtn">Add to leaderboard</button></div>
   <button class="go" id="again">Ride again</button>
+  <button class="ghost" id="lbBtn2">Leaderboard</button>
+</div>
+
+<div class="overlay hide" id="board">
+  <h2>Leaderboard</h2>
+  <div id="rows"></div>
+  <div id="lbNote">Finish the course to add your name. Scores are saved on this device.</div>
+  <button class="ghost" id="lbClose">Back</button>
 </div>
 
 <script>/* three.js r128 (MIT licence), bundled for offline play */
@@ -880,7 +906,7 @@ function popup(txt,col){const d=document.createElement('div');d.textContent=txt;
   for(const c of p.children)c.style.marginTop=(parseFloat(c.style.marginTop||0)-34)+'px';
   p.appendChild(d);setTimeout(()=>d.remove(),1100);}
 function bump(n){P.mult=Math.min(10,P.mult+(n||1));P.combo=5;}
-function start(){initAudio();MUS.step=0;
+function start(){initAudio();MUS.step=0;$('board').classList.add('hide');$('nameRow').classList.remove('show');
   try{if('speechSynthesis' in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}}catch(e){}
   if(ac&&ac.state==='suspended')ac.resume();reset();state='play';
   $('menu').classList.add('hide');$('over').classList.add('hide');$('hudwrap').style.display='';}
@@ -888,7 +914,7 @@ let bestTime=0;try{bestTime=+localStorage.getItem('pdrBestTime')||0;}catch(e){}
 const fmtT=t=>Math.floor(t/60)+':'+(t%60<10?'0':'')+(t%60).toFixed(1);
 function saveBest(sc){if(sc>best){best=sc;try{localStorage.setItem('neonDescentBest',best);}catch(e){}}}
 function gameOver(){state='over';try{speechSynthesis.cancel();}catch(e){}const sc=Math.round(P.score);saveBest(sc);
-  $('oh').textContent='Wiped out';$('oh').style.textShadow='';
+  $('oh').textContent='Wiped out';$('oh').style.textShadow='';$('nameRow').classList.remove('show');lastRun=null;
   $('fs').textContent=sc.toLocaleString();$('fd').textContent=Math.round(P.s)+' M  ·  '+DIST[distIdx(P.s)].name+'  ·  '+Math.round(P.s/S_FIN*100)+'% OF THE WAY DOWN';$('fb').textContent=best.toLocaleString();
   setTimeout(()=>{if(state==='over')$('over').classList.remove('hide');},700);}
 function finishRun(){
@@ -898,7 +924,30 @@ function finishRun(){
   $('oh').textContent='Harbour reached';$('oh').style.textShadow='0 0 8px #3dff8a,0 0 30px #3dff8a';
   $('fs').textContent=fmtT(t);$('fd').innerHTML=(rec?'NEW BEST TIME':'BEST TIME '+fmtT(bestTime))+'  ·  SCORE <b>'+sc.toLocaleString()+'</b>  ·  FINISH BONUS +'+bonus.toLocaleString();$('fb').textContent=best.toLocaleString();
   [523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>blip(f,0.25,'square',0.07),i*110));
+  lastRun={sc,t};try{$('nm').value=localStorage.getItem('pdrName')||'';}catch(e){}$('nameRow').classList.add('show');
   setTimeout(()=>{if(state==='finish')$('over').classList.remove('hide');},1500);}
+/* ---------- leaderboard: kept on this device, seeded with made-up riders ---------- */
+const SEED_BOARD=[['KOWLOON KID',52400,121.4],['DING DING',46150,126.9],['NEON NAT',40800,131.2],['PEAK FREAK',35300,134.8],['TRAM SURFER',29900,139.5],
+  ['SOHO JOE',24600,146.0],['OLLIE MA',19250,152.3],['HARBOUR HANK',14100,161.7],['LAST BUS',9300,174.9],['WOBBLY WAI',5200,189.6]].map(([n,sc,t])=>({n,sc,t,seed:1}));
+let boardData=null,lastRun=null,myRow=null;
+function loadBoard(){if(boardData)return boardData;try{const j=JSON.parse(localStorage.getItem('pdrBoard'));if(Array.isArray(j)&&j.length)boardData=j;}catch(e){}
+  if(!boardData)boardData=SEED_BOARD.slice();return boardData;}
+function saveBoard(){boardData.sort((a,b)=>b.sc-a.sc);boardData=boardData.slice(0,50);try{localStorage.setItem('pdrBoard',JSON.stringify(boardData));}catch(e){}}
+function showBoard(){
+  const rows=$('rows'),b=loadBoard().slice().sort((a,c)=>c.sc-a.sc);rows.textContent='';
+  const add=(e,i)=>{const d=document.createElement('div');if(e===myRow)d.className='me';
+    for(const [c,t] of [['rk',i+1],['nm',e.n],['sc',e.sc.toLocaleString()],['tm',fmtT(e.t)]]){const sp=document.createElement('span');sp.className=c;sp.textContent=t;d.appendChild(sp);}rows.appendChild(d);return d;};
+  b.slice(0,10).forEach(add);
+  const mi=b.indexOf(myRow);if(mi>=10){const g=document.createElement('div');g.className='gap';g.textContent='· · ·';rows.appendChild(g);add(myRow,mi);}
+  $('board').classList.remove('hide');
+}
+function addScore(){
+  if(!lastRun)return;const n=($('nm').value||'').replace(/\s+/g,' ').trim().toUpperCase().slice(0,12)||'RIDER';
+  try{localStorage.setItem('pdrName',n);}catch(e){}
+  myRow={n,sc:lastRun.sc,t:+lastRun.t.toFixed(1)};loadBoard().push(myRow);saveBoard();lastRun=null;
+  $('nameRow').classList.remove('show');$('nm').blur();showBoard();
+}
+$('lbBtn').onclick=$('lbBtn2').onclick=showBoard;$('lbClose').onclick=()=>$('board').classList.add('hide');$('addBtn').onclick=addScore;
 function banner(d){const b=$('banner');b.innerHTML=d.name+'<small>'+d.zh+'</small>';b.classList.remove('show');void b.offsetWidth;b.classList.add('show');}
 function bail(){
   P.lives--;drawLives();P.invuln=2.2;P.v*=0.35;P.mult=1;P.combo=0;P.shake=1.2;P.trick=null;P.pendingPts=0;P.onRamp=null;if(P.grind){P.grind=null;P.grounded=true;}
@@ -950,6 +999,8 @@ function tapAction(){if(P.grounded||P.onRamp||P.grind||(P.launched&&!P.popped&&P
 /* ---------- input ---------- */
 addEventListener('keydown',e=>{
   const k=e.code,first=!e.repeat;
+  if(e.target&&e.target.tagName==='INPUT'){if(k==='Enter')addScore();return;}   /* typing a name: leave the keys alone */
+  if(!$('board').classList.contains('hide')){if(k==='Escape'||k==='Enter'||k==='Space'){$('board').classList.add('hide');e.preventDefault();}return;}
   if(k==='ArrowLeft'||k==='KeyA'){key.l=true;if(first)trickInput('l');}
   else if(k==='ArrowRight'||k==='KeyD'){key.r=true;if(first)trickInput('r');}
   else if(k==='ArrowDown'||k==='KeyS')key.brake=true;
@@ -960,7 +1011,7 @@ addEventListener('keydown',e=>{
   else return;
   e.preventDefault();
 });
-addEventListener('keyup',e=>{const k=e.code;
+addEventListener('keyup',e=>{const k=e.code;if(e.target&&e.target.tagName==='INPUT')return;
   if(k==='ArrowLeft'||k==='KeyA')key.l=false;else if(k==='ArrowRight'||k==='KeyD')key.r=false;
   else if(k==='ArrowDown'||k==='KeyS')key.brake=false;else if(k==='ArrowUp'||k==='KeyW')key.up=false;});
 addEventListener('blur',()=>{key.l=key.r=key.up=key.brake=false;});
@@ -1181,7 +1232,7 @@ function frame(ms){
 }
 document.addEventListener('visibilitychange',()=>{lastT=0;});
 P.y=cy(0);
-window.__game={P,MUS,get state(){return state;},get obs(){return obs;},get pills(){return pills;},start,step,key,addOb};   /* small hook for automated play-testing */
+window.__game={finishRun,P,MUS,get state(){return state;},get obs(){return obs;},get pills(){return pills;},start,step,key,addOb};   /* small hook for automated play-testing */
 requestAnimationFrame(frame);
 })();
 </script>
