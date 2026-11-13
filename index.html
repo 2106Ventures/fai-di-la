@@ -29,8 +29,8 @@
   #multbar{display:block;height:3px;width:90px;background:rgba(255,79,216,.25);margin-top:3px;box-shadow:none}
   #multbar i{display:block;height:100%;background:#ff4fd8;width:100%}
   #lives{top:16px;right:18px;display:flex;gap:7px}
-  #lives span{width:34px;height:10px;border-radius:6px;background:#ffe14f;box-shadow:0 0 12px #ffe14f}
-  #lives span.off{background:rgba(255,255,255,.12);box-shadow:none}
+  #lives span{width:30px;height:11px;border-radius:6px;background:linear-gradient(90deg,#e8281c 50%,#f4f4f8 50%);box-shadow:0 0 10px rgba(255,90,80,.8)}
+  #lives span.off{background:rgba(255,255,255,.14);box-shadow:none}
   #speed{bottom:16px;left:18px;font-size:40px;color:#ffe14f;line-height:1}
   #speed small{font-size:14px;letter-spacing:.2em;margin-left:5px;color:#b9a8ff}
   #dist{bottom:20px;right:18px;font-size:20px;color:#b9a8ff}
@@ -101,6 +101,7 @@
     <b>FLICK</b><span>In the air: ← → barrel roll, ↓ grab &nbsp;·&nbsp; on the road: ↑ push</span></span>
     <b>RAMPS</b><span>Kickers, launch ramps, mega ramps and gap jumps — faster in means higher out</span>
     <b>GRIND</b><span>Ollie onto rails and kerbs to grind — hold ← or → as you land for a boardslide</span>
+    <b>HEALTH</b><span>Red-and-white pills along the route restore a life (up to 5)</span>
     <b>SCORE</b><span>Near misses, tricks and air build your multiplier</span>
   </div>
   <button class="go" id="start">Drop in</button>
@@ -631,7 +632,20 @@ function addRail(s0,len,u){
     if(i%2===0||i===n-1){const ps=s0+i*2+(i===n-1?2:0),po=new THREE.Mesh(Gm.railPost,M.steel);po.position.set(PX(ps,u),GY(ps,u)+0.3,PZ(ps,u));g.add(po);}}
   const o={type:'rail',T:TYPES.rail,s:s0+n,hl:n,u,tu:u,vel:0,mesh:g,world:true,hit:false,passed:true};scene.add(g);obs.push(o);return o;}
 function addCoin(s,u,h){const m=new THREE.Mesh(Gm.coin,M.coin);scene.add(m);coins.push({s,u,h,mesh:m});}
-function clearObs(){for(const o of obs)scene.remove(o.mesh);for(const c of coins)scene.remove(c.mesh);obs=[];coins=[];}
+/* health pills: fixed spots down the course, one roughly every 500 m, each restoring a life */
+const MAX_LIVES=5, PILL_SPOTS=[[650,-3.5],[1200,3.2],[1750,-1.2],[2300,4.6],[2850,-4.8],[3350,1.8],[3850,-2.6],[4300,3.8],[4750,-4.2],[5150,0.6]];
+const PG={cyl:new THREE.CylinderGeometry(0.3,0.3,0.5,12),cap:new THREE.SphereGeometry(0.3,12,8),beam:box(0.16,16,0.16),
+  red:B({color:0xe8281c}),white:B({color:0xf6f6fa}),beamM:B({color:0x7dffb0,transparent:true,opacity:0.35,depthWrite:false}),
+  glow:new THREE.SpriteMaterial({map:glowTex,color:0x7dffb0,transparent:true,opacity:0.45,depthWrite:false})};
+let pills=[];
+function makePills(){
+  for(const [ps,pu] of PILL_SPOTS){const g=new THREE.Group(),cap=new THREE.Group();
+    mesh(PG.cyl,PG.red,0,0.25,0,cap);mesh(PG.cap,PG.red,0,0.5,0,cap);mesh(PG.cyl,PG.white,0,-0.25,0,cap);mesh(PG.cap,PG.white,0,-0.5,0,cap);
+    cap.rotation.z=0.8;cap.scale.setScalar(1.5);g.add(cap);
+    const sp=new THREE.Sprite(PG.glow);sp.scale.setScalar(4.2);g.add(sp);mesh(PG.beam,PG.beamM,0,8.5,0,g);
+    g.position.set(PX(ps,pu),GY(ps,pu)+1.25,PZ(ps,pu));scene.add(g);pills.push({s:ps,u:pu,mesh:g,cap});}
+}
+function clearObs(){for(const o of obs)scene.remove(o.mesh);for(const c of coins)scene.remove(c.mesh);for(const q of pills)scene.remove(q.mesh);obs=[];coins=[];pills=[];}
 /* per-district mix: [oncoming, with-flow, barrier, skip, jumps, coin line, grind rail, pedestrians, market stall, scaffolding] */
 const SPAWN=[[22,12,8,2,22,10,18,0,0,0],[27,14,8,4,18,6,13,4,0,6],[19,10,6,3,16,6,15,11,12,2],[25,14,6,4,16,5,12,8,6,4],[26,16,6,3,17,5,12,7,0,8]];
 function spawnRow(s,diff){
@@ -825,9 +839,9 @@ function reset(){
   clearObs();Object.assign(P,{s:0,u:-1.75,vu:0,y:cy(0),vy:0,v:20,grounded:true,air:0,lean:0,shake:0,invuln:0,lives:3,
     trick:null,tricksAir:0,pendingPts:0,score:0,mult:1,combo:0,coinsGot:0,onRamp:null,popT:0,popped:false,launched:false,
     fromRamp:false,rampVy:0,kinds:{},flipN:0,grabT:0,grabbing:false,autoGrab:0,pushT:0,camRoll:0,grind:null,grindT:0,grindName:'',time:0,di:-1});
-  nextSpawn=110;drawLives();
+  nextSpawn=110;drawLives();makePills();
 }
-function drawLives(){$('lives').innerHTML=[0,1,2].map(i=>'<span'+(i<P.lives?'':' class="off"')+'></span>').join('');}
+function drawLives(){$('lives').innerHTML=[0,1,2,3,4].map(i=>'<span'+(i<P.lives?'':' class="off"')+'></span>').join('');}
 function popup(txt,col){const d=document.createElement('div');d.textContent=txt;d.style.color=col||'#7ff6ff';
   const p=$('pop');if(p.children.length>2)p.removeChild(p.firstChild);
   for(const c of p.children)c.style.marginTop=(parseFloat(c.style.marginTop||0)-34)+'px';
@@ -853,7 +867,7 @@ function finishRun(){
 function banner(d){const b=$('banner');b.innerHTML=d.name+'<small>'+d.zh+'</small>';b.classList.remove('show');void b.offsetWidth;b.classList.add('show');}
 function bail(){
   P.lives--;drawLives();P.invuln=2.2;P.v*=0.35;P.mult=1;P.combo=0;P.shake=1.2;P.trick=null;P.pendingPts=0;P.onRamp=null;if(P.grind){P.grind=null;P.grounded=true;}
-  $('flash').style.transition='none';$('flash').style.opacity=0.55;requestAnimationFrame(()=>{$('flash').style.transition='opacity .6s';$('flash').style.opacity=0;});
+  $('flash').style.background='';$('flash').style.transition='none';$('flash').style.opacity=0.55;requestAnimationFrame(()=>{$('flash').style.transition='opacity .6s';$('flash').style.opacity=0;});
   blip(120,0.4,'sawtooth',0.18,40);popup(P.lives>0?'BAIL!':'WIPEOUT','#ff4d6d');
   if(P.lives<=0)gameOver();
 }
@@ -1053,6 +1067,17 @@ function step(dt){
       scene.remove(c.mesh);coins.splice(i,1);continue;}
     if(ds<-10){scene.remove(c.mesh);coins.splice(i,1);}
   }
+  for(let i=pills.length-1;i>=0;i--){
+    const q=pills[i],ds=q.s-P.s;q.cap.rotation.y+=dt*3;q.mesh.position.y=GY(q.s,q.u)+1.25+Math.sin(P.time*3+i)*0.15;
+    if(Math.abs(ds)<1.8+P.v*dt&&Math.abs(q.u-P.u)<1.6&&h<2.6){
+      if(P.lives<MAX_LIVES){P.lives++;drawLives();popup('+1 HEALTH','#7dffb0');}
+      else{const pts=2000*P.mult;P.score+=pts;popup('HEALTH FULL  +'+pts.toLocaleString(),'#7dffb0');}
+      const f=$('flash');f.style.transition='none';f.style.background='#3dff8a';f.style.opacity=0.35;
+      requestAnimationFrame(()=>{f.style.transition='opacity .6s';f.style.opacity=0;setTimeout(()=>{f.style.background='';},650);});
+      [660,880,1320].forEach((fq,k)=>setTimeout(()=>blip(fq,0.16,'triangle',0.1),k*70));
+      scene.remove(q.mesh);pills.splice(i,1);continue;}
+    if(ds<-15){scene.remove(q.mesh);pills.splice(i,1);}
+  }
   /* scoring / timers */
   P.score+=(P.s-s0)*0.5*P.mult;
   if(P.combo>0){P.combo-=dt;if(P.combo<=0)P.mult=1;}
@@ -1120,7 +1145,7 @@ function frame(ms){
 }
 document.addEventListener('visibilitychange',()=>{lastT=0;});
 P.y=cy(0);
-window.__game={addOb,S_FIN,DIST,distIdx,setTOD,MUS,TX,TZ,TY,TH,TK,TG,P,get state(){return state;},get obs(){return obs;},start,step,key};
+window.__game={get pills(){return pills;},addOb,S_FIN,DIST,distIdx,setTOD,MUS,TX,TZ,TY,TH,TK,TG,P,get state(){return state;},get obs(){return obs;},start,step,key};
 requestAnimationFrame(frame);
 })();
 </script>
