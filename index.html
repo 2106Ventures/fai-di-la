@@ -181,7 +181,7 @@ const gen={k:0,g:-0.12,kt:0,gt:-0.12,left:OFF+70,th:0,x:0,z:OFF,y:0,q:[],fin:fal
 const S_FIN=5400,END_S=5640;   /* finish line, and where the road stops at the pier */
 const DIST=[{s:0,name:'THE PEAK',zh:'山頂',w:[1,4,3.5,3,0.5,0.5,0]},{s:950,name:'MID-LEVELS',zh:'半山',w:[3.5,2.5,1.5,1,2,1.5,0.5]},
   {s:2000,name:'SOHO',zh:'蘇豪',w:[1,3,2,0.5,1,1,3.5]},{s:3100,name:'WAN CHAI',zh:'灣仔',w:[2,2.5,2.5,1.5,1,1.5,1.5]},{s:4250,name:'CENTRAL',zh:'中環',w:[2.5,1.5,2,4,1.5,1.5,0]}];
-const TRAM_S=260,TRAM_U=-3.2;   /* the Peak Tram shortcut: pass under its sign in the far-left lane and you are carried straight to Central */
+const TRAM_S=260,TRAM_U=-3.2;   /* the Peak Tram shortcut: pass under its sign in the far-left lane and it throws you out somewhere at random: the top of the Peak, Mid-Levels, Wan Chai or Central */
 const distIdx=s=>{let i=0;while(i<DIST.length-1&&s>=DIST[i+1].s)i++;return i;};
 let tseed=1997;const trnd=()=>{tseed=(tseed*16807)%2147483647;return (tseed-1)/2147483646;};   /* fixed seed: the same course every run */
 function nextSection(){
@@ -377,7 +377,7 @@ const chkTex=tex(128,32,(g,w,h)=>{for(let x=0;x<16;x++)for(let y=0;y<4;y++){g.fi
 const pierTex=dnTex(512,112,(g,w,h,n)=>drawSign(g,w,h,'天星碼頭 STAR FERRY',1,5,false,n));
 const tramTex=tex(512,224,(g,w,h)=>{g.fillStyle='#6a1420';g.fillRect(0,0,w,h);g.strokeStyle='#f4e8c8';g.lineWidth=8;g.strokeRect(10,10,w-20,h-20);
   g.fillStyle='#f4e8c8';g.textAlign='center';g.textBaseline='middle';g.font='900 74px '+CJK;g.fillText('山頂纜車',w/2,62);g.font='900 52px Arial,sans-serif';g.fillText('PEAK TRAM',w/2,128);
-  g.fillStyle='#ffd43a';g.font='900 30px '+CJK;g.fillText('↓  中環 CENTRAL  ↓',w/2,184);});
+  g.fillStyle='#ffd43a';g.font='900 30px '+CJK;g.fillText('↓  ？？？  ↓',w/2,184);});
 const clockTex=tex(128,128,(g,w,h)=>{g.fillStyle='#f6f0dc';g.beginPath();g.arc(64,64,60,0,7);g.fill();g.strokeStyle='#1f6a4a';g.lineWidth=6;g.stroke();
   g.strokeStyle='#222';g.lineWidth=5;g.beginPath();g.moveTo(64,64);g.lineTo(64,22);g.moveTo(64,64);g.lineTo(92,76);g.stroke();
   for(let i=0;i<12;i++){const a=i*Math.PI/6;g.fillStyle='#222';g.fillRect(64+Math.sin(a)*50-2,64-Math.cos(a)*50-2,4,4);}});
@@ -929,7 +929,7 @@ const key={l:false,r:false,brake:false,up:false};let touchSteer=0,jumpQueued=fal
 function reset(){
   clearObs();Object.assign(P,{s:0,u:-1.75,vu:0,y:cy(0),vy:0,v:20,grounded:true,air:0,lean:0,shake:0,invuln:0,lives:3,
     trick:null,tricksAir:0,pendingPts:0,score:0,mult:1,combo:0,coinsGot:0,onRamp:null,popT:0,popped:false,launched:false,
-    fromRamp:false,rampVy:0,kinds:{},flipN:0,grabT:0,grabbing:false,autoGrab:0,pushT:0,grind:null,grindT:0,grindName:'',time:0,di:-1,cheat:false});
+    fromRamp:false,rampVy:0,kinds:{},flipN:0,grabT:0,grabbing:false,autoGrab:0,pushT:0,grind:null,grindT:0,grindName:'',time:0,di:-1,cheat:false,tramUsed:false});
   nextSpawn=110;drawLives();makePills();
 }
 function drawLives(){$('lives').innerHTML=[0,1,2,3,4].map(i=>'<span'+(i<P.lives?'':' class="off"')+'></span>').join('');}
@@ -1010,14 +1010,16 @@ function addScore(){
 }
 $('lbBtn').onclick=$('lbBtn2').onclick=$('lbBtn3').onclick=showBoard;$('lbClose').onclick=()=>$('board').classList.add('hide');$('addBtn').onclick=addScore;
 function tramWarp(){
-  const to=DIST[4].s+12;P.cheat=true;
+  /* a gamble: the tram throws you out at the top of the Peak, Mid-Levels, Wan Chai or Central, each one time in four */
+  const di=[0,1,3,4][(Math.random()*4)|0],to=di===0?20:DIST[di].s+12;P.cheat=true;P.tramUsed=di!==0;   /* sent back to the top? the sign is there to try again */
   for(const o of obs)scene.remove(o.mesh);for(const c of coins)scene.remove(c.mesh);obs=[];coins=[];
   for(let i=pills.length-1;i>=0;i--)if(pills[i].s<to){scene.remove(pills[i].mesh);pills.splice(i,1);}
-  Object.assign(P,{s:to,u:-1.75,vu:0,v:30,grounded:true,onRamp:null,grind:null,trick:null,grabbing:false,pendingPts:0,tricksAir:0,air:0,popT:0,invuln:2.5,shake:0.5});
+  Object.assign(P,{s:to,u:-1.75,vu:0,v:di===0?20:30,grounded:true,onRamp:null,grind:null,trick:null,grabbing:false,pendingPts:0,tricksAir:0,air:0,popT:0,invuln:2.5,shake:0.5});
   P.y=GY(P.s,P.u);P.vy=cyd(P.s)*P.v;nextSpawn=to+120;
   const f=$('flash');f.style.transition='none';f.style.background='#fff';f.style.opacity=0.95;
   requestAnimationFrame(()=>{f.style.transition='opacity 1.1s';f.style.opacity=0;setTimeout(()=>{f.style.background='';},1150);});
-  hornCool=0;horn('tram',0,false);popup('PEAK TRAM SHORTCUT','#ffe14f');
+  hornCool=0;horn('tram',0,false);P.di=di;banner(DIST[di]);$('district').textContent=DIST[di].name+' · '+DIST[di].zh;
+  popup(di===0?'PEAK TRAM: BACK TO THE TOP!':'PEAK TRAM: '+DIST[di].name,di===0?'#ff9f43':'#ffe14f');
 }
 function banner(d){const b=$('banner');b.innerHTML=d.name+'<small>'+d.zh+'</small>';b.classList.remove('show');void b.offsetWidth;b.classList.add('show');}
 function bail(){
@@ -1135,7 +1137,7 @@ function step(dt){
   if(Math.abs(P.u)>lim&&!P.grind){P.u=Math.sign(P.u)*lim;if(Math.abs(P.vu)>3)P.shake=Math.max(P.shake,0.25);P.vu*=-0.2;if(P.grounded)P.v*=1-0.6*dt;}
   P.lean+=((steer*0.16+P.vu*0.012)-P.lean)*Math.min(1,dt*7);
   const s0=P.s;P.s+=P.v*dt;
-  if(!P.cheat&&s0<TRAM_S&&P.s>=TRAM_S&&P.u<TRAM_U&&P.y-GY(P.s,P.u)<4){tramWarp();return;}
+  if(!P.tramUsed&&s0<TRAM_S&&P.s>=TRAM_S&&P.u<TRAM_U&&P.y-GY(P.s,P.u)<4){tramWarp();return;}
   /* vertical */
   if(jumpQueued){jumpQueued=false;pressJump();}
   const gy=GY(P.s,P.u),gvy=cyd(P.s)*P.v;
