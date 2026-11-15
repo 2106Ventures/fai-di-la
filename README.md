@@ -1,4 +1,6 @@
-# Pak Darky Races
+# Fai Di La! 快啲啦！
+
+*"Fai di la" is Cantonese for "hurry up!"*
 
 A first-person downhill skateboarding game: a 5.4 km run from the Peak to the Star Ferry pier through 1990s Hong Kong Island. Single-page browser game, playable offline.
 
