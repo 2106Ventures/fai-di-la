@@ -5,7 +5,7 @@
 A first-person downhill skateboarding game: a 5.4 km run from the Peak to the Star Ferry pier through 1990s Hong Kong Island. Single-page browser game, playable offline.
 
 ## Play
-Open the GitHub Pages address for this repo in a browser.
+https://2106ventures.github.io/fai-di-la/
 
 ## Controls
 | | On the road | In the air |
