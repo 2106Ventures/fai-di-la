@@ -650,21 +650,6 @@ function makeTram(){const g=new THREE.Group(),c=VM.tramCol[(Math.random()*3)|0];
 function makeBarrier(){const g=new THREE.Group();mesh(Gm.bar,M.bar,0,0.6,0,g);
   mesh(Gm.barLeg,M.pole,-1.4,0.25,0,g);mesh(Gm.barLeg,M.pole,1.4,0.25,0,g);return g;}
 function makeDump(){const g=new THREE.Group();mesh(Gm.dump,M.dump,0,0.7,0,g);mesh(Gm.dumpTrim,M.dumpTrim,0,1.42,0,g);return g;}
-/* Wan Chai pedestrians call out as you pass: a speech bubble over their head, and the device's own voice says it aloud where speech is available */
-const CALL='Dukka dukka Wan Chaiiiiiiii!';
-const bubbleMat=new THREE.SpriteMaterial({map:tex(320,112,(g,w,h)=>{g.fillStyle='#fff';g.strokeStyle='#16161a';g.lineWidth=5;
-  const r=22,x0=6,y0=6,x1=w-6,y1=h-30;g.beginPath();g.moveTo(x0+r,y0);g.lineTo(x1-r,y0);g.quadraticCurveTo(x1,y0,x1,y0+r);g.lineTo(x1,y1-r);g.quadraticCurveTo(x1,y1,x1-r,y1);
-  g.lineTo(w/2+16,y1);g.lineTo(w/2,h-6);g.lineTo(w/2-10,y1);g.lineTo(x0+r,y1);g.quadraticCurveTo(x0,y1,x0,y1-r);g.lineTo(x0,y0+r);g.quadraticCurveTo(x0,y0,x0+r,y0);g.closePath();g.fill();g.stroke();
-  g.fillStyle='#16161a';g.font='900 23px Arial,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(CALL,w/2,(y0+y1)/2+1);}),depthWrite:false});
-let sayCool=0;
-function say(){
-  if(muted||sayCool>0||!('speechSynthesis' in window))return;sayCool=3;
-  /* two parts: a rapid-fire "dukka dukka", then a long drawn-out "Wan Chai" */
-  try{if(speechSynthesis.speaking||speechSynthesis.pending)return;const pitch=0.85+Math.random()*0.1;
-    const a=new SpeechSynthesisUtterance('dukka dukka');a.rate=1.5;a.pitch=pitch;a.volume=0.9;
-    const b=new SpeechSynthesisUtterance('Wan chaaaaaai');b.rate=0.4;b.pitch=pitch+0.15;b.volume=0.9;
-    speechSynthesis.speak(a);speechSynthesis.speak(b);}catch(e){}
-}
 function makePed(){const g=new THREE.Group();mesh(Gm.pLegs,M.dark,0,0.4,0,g);mesh(Gm.pBody,M.shirt[(Math.random()*6)|0],0,1.17,0,g);mesh(Gm.pHead,M.pskin,0,1.72,0,g);return g;}
 function makeStall(){const g=new THREE.Group();mesh(Gm.stTable,M.wood,0,0.45,0,g);   /* market stall under a red-white-blue awning */
   for(let i=0;i<7;i++)mesh(Gm.stGoods,M.shirt[(Math.random()*6)|0],-0.9+(i%4)*0.6,1.07,i<4?-0.4:0.4,g);
@@ -719,7 +704,7 @@ function makePills(){
 }
 function clearObs(){for(const o of obs)scene.remove(o.mesh);for(const c of coins)scene.remove(c.mesh);for(const q of pills)scene.remove(q.mesh);obs=[];coins=[];pills=[];}
 /* per-district mix: [oncoming, with-flow, barrier, skip, jumps, coin line, grind rail, pedestrians, market stall, scaffolding] */
-const SPAWN=[[22,12,8,2,22,10,18,0,0,0],[27,14,8,4,18,6,13,4,0,6],[19,10,6,3,16,6,15,11,12,2],[22,13,6,4,16,5,12,15,4,3],[26,16,6,3,17,5,12,7,0,8]];
+const SPAWN=[[22,12,8,2,22,10,18,0,0,0],[27,14,8,4,18,6,13,4,0,6],[19,10,6,3,16,6,15,11,12,2],[25,14,6,4,16,5,12,8,6,4],[26,16,6,3,17,5,12,7,0,8]];
 function spawnRow(s,diff){
   const di=distIdx(s),w=SPAWN[di];let r=Math.random()*w.reduce((a,b)=>a+b,0),cat=0;while(cat<9&&r>=w[cat]){r-=w[cat];cat++;}if(!w[cat])cat=5;
   let extra=0;
@@ -749,8 +734,7 @@ function spawnRow(s,diff){
     for(let x=st+3;x<st+len-1;x+=6)addCoin(x,u,1.75);extra=len+(kick?5:0);}
   else if(cat===7){ /* pedestrians crossing */
     const n=1+((Math.random()*2.4)|0),dir=Math.random()<0.5?-1:1;
-    for(let i=0;i<n;i++){const o=addOb('ped',s+i*1.3+Math.random(),-dir*(HALF+0.5+i*1.1+Math.random()*2));o.vu=dir*(1.3+Math.random()*0.9);
-      if(di===3){o.bubble=new THREE.Sprite(bubbleMat);o.bubble.scale.set(3.4,1.2,1);o.bubble.position.y=2.75;o.bubble.visible=false;o.mesh.add(o.bubble);}}}   /* Wan Chai only */
+    for(let i=0;i<n;i++){const o=addOb('ped',s+i*1.3+Math.random(),-dir*(HALF+0.5+i*1.1+Math.random()*2));o.vu=dir*(1.3+Math.random()*0.9);}}
   else if(cat===8){const sd=Math.random()<0.5?-1:1;addOb('stall',s,sd*(HALF-1.6));if(Math.random()<0.5)addOb('stall',s+4.5,sd*(HALF-1.6));extra=5;}
   else{addOb('scaffold',s,(Math.random()<0.5?-1:1)*(HALF-1.5));}
   for(const o of obs)if(o.u===-99){o.u=o.tu=LANES[o.lane];}
@@ -946,7 +930,6 @@ function popup(txt,col){const d=document.createElement('div');d.textContent=txt;
   p.appendChild(d);setTimeout(()=>d.remove(),1100);}
 function bump(n){P.mult=Math.min(10,P.mult+(n||1));P.combo=5;}
 function start(){initAudio();MUS.step=0;harbourOn=false;$('board').classList.add('hide');$('nameRow').classList.remove('show');
-  try{if('speechSynthesis' in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}}catch(e){}
   if(ac&&ac.state==='suspended')ac.resume();reset();state='play';
   $('menu').classList.add('hide');$('over').classList.add('hide');$('flash').style.opacity=0;$('flash').style.background='';$('dead').classList.add('hide');if(wreck){scene.remove(wreck);wreck=null;}deathCam=null;$('hudwrap').style.display='';}
 let bestTime=0;try{bestTime=+localStorage.getItem('pdrBestTime')||0;}catch(e){}
@@ -969,7 +952,7 @@ function makeWreck(){
   for(const x of [-0.25,0.2])mesh(gb(0.1,0.012,5),WM.skid,x,0.02,4.2,g).rotation.y=x*0.12;                    /* skid marks leading in */
   return g;
 }
-function gameOver(){state='over';try{speechSynthesis.cancel();}catch(e){}const sc=Math.round(P.score);saveBest(sc);
+function gameOver(){state='over';const sc=Math.round(P.score);saveBest(sc);
   lastRun=null;$('nameRow').classList.remove('show');$('hudwrap').style.display='none';
   /* lay the wreck on the road just ahead and stop the traffic around it */
   const sb=Math.min(END_S-40,P.s+2.5),ub=Math.max(-HALF+1.2,Math.min(HALF-1.2,P.u));
@@ -1271,7 +1254,7 @@ function step(dt){
   P.time+=dt;
   {const di=distIdx(P.s);if(di!==P.di){P.di=di;banner(DIST[di]);$('district').textContent=DIST[di].name+' · '+DIST[di].zh;}}
   if(P.s>=S_FIN){finishRun();return;}
-  if(hornCool>0)hornCool-=dt;if(sayCool>0)sayCool-=dt;if(P.popT>0)P.popT-=dt;if(P.autoGrab>0)P.autoGrab-=dt;if(P.pushT>0)P.pushT-=dt;
+  if(hornCool>0)hornCool-=dt;if(P.popT>0)P.popT-=dt;if(P.autoGrab>0)P.autoGrab-=dt;if(P.pushT>0)P.pushT-=dt;
   const h=P.y-GY(P.s,P.u);
   /* spawn */
   while(nextSpawn<P.s+290&&nextSpawn<S_FIN-70){const ex=spawnRow(nextSpawn,diff);nextSpawn+=ex+(38-22*diff)*(0.7+Math.random()*0.6);}
@@ -1290,7 +1273,6 @@ function step(dt){
     place(o);
     if(o.vu){o.mesh.rotation.y+=o.vu>0?-Math.PI/2:Math.PI/2;o.mesh.position.y+=Math.abs(Math.sin(o.u*5))*0.07;}
     const ds=o.s-P.s,du=Math.abs(o.u-P.u);
-    if(o.bubble){o.bubble.visible=ds>-3&&ds<34;if(!o.spoke&&ds>0&&ds<Math.max(14,P.v*0.45)){o.spoke=true;say();}}
     if(o.vel&&!o.honked&&ds>0&&ds<(P.v-o.vel)*0.75&&du<T.hw+2.1&&h<T.h+1){o.honked=true;horn(o.type,(o.u-P.u)/3,o.vel<0);}  /* too close: horn / ding ding */
     if(T.ramp){
       if(!o.hit&&P.grounded&&!P.onRamp&&du<T.hw&&ds<hl&&ds>-hl){o.hit=true;P.onRamp=o;}
